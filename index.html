@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Ticker App</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>  
+
+    <script type="text/javascript" src="app.js"></script>
+
+    <script language="javascript">
+        $(document).ready(function () {
+            init();
+            displayInputField();
+        });
+  
+        // Hides input field until user selections an input option
+        function init() {
+          $("#enter-name").hide();
+          $("#enter-ticker").hide();
+          $("#user_input").hide();
+        }
+  
+        // Display input textbox depending on what information user inputs
+        function displayInputField() {
+          $("input[name='input_type'").on("change", function () {
+            let picked = $("input[name='input_type']:checked").val();
+            showField(picked);
+          });
+        }
+  
+        // Shows prompt for user to input a company name or a
+        // compay's ticker.
+        function showField(infoType) {
+          $("#user_input").show();
+          if (infoType == "company") {
+            $("#enter-name").show();
+            $("#enter-ticker").hide();
+          } else if (infoType == "ticker") {
+            $("#enter-ticker").show();
+            $("#enter-name").hide();
+          }
+        }
+      </script>
+
+</head>
+
+<body>
+    <h1>Welcome to the Stock Ticker App</h1>
+
+    <form method="POST" action="/result" target="_blank">
+      Enter which Info will be Provided: <br />
+      <input type="radio" name="input_type" id="input_type" value="company" />
+      Company Name <br />
+      <input type="radio" name="input_type" id="input_type" value="ticker" />
+      Company Ticker <br />
+
+      <div id="enter-name">
+        <p>Enter a company name:</p>
+        <!-- <input type="text" name="user_input" id="user_input" /> <br /><br /> -->
+      </div>
+
+      <div id="enter-ticker">
+        <p>Enter a company ticker:</p>
+        <!-- <input type="text" name="user_input" id="user_input" /> <br /><br /> -->
+      </div>
+      <input type="text" name="user_input" id="user_input" /> <br /><br />
+
+      <input type="submit" name="FormBtn" id="FormBtn" value="Submit" /><br />
+
+      <!-- Display answer here -->
+      <div id="answer"></div>
+    </form>
+    <!-- End of form -->
+</body>
+</html>

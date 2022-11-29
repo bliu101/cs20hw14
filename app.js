@@ -9,91 +9,46 @@ const MongoClient = require("mongodb").MongoClient;
 const mongoUrl = "mongodb+srv://bridgette-liu:KbwY0KGeNLy67Lab@cluster0.ksk0v6y.mongodb.net/?retryWrites=true&w=majority";
 
 const server = http.createServer((req, res) => {
-  // create filepath for any page
-  var filePath = path.join(__dirname,
-    req.url === "/" ? "index.html" : req.url
-  );
+  var file_path = path.join(__dirname, req.url === "/" ? "index.html" : req.url);
 
-  console.log(filePath);
+  var content_type = get_content_type(file_path);
 
-  // Ensure correct content type is picked
-  var contentType = getContType(filePath);
-
-  if (req.url == "/result") {
+  if (req.url == "/find") {
     res.writeHead(200, { "Content-Type": "text/html" });
-    pdata = "";
+    input_data = "";
     req
       .on("data", (data) => {
-        pdata += data.toString();
+        input_data += data.toString();
       })
       .on("end", () => {
-        pdata = qs.parse(pdata);
+        input_data = qs.parse(input_data);
 
-        var type = pdata["input_type"];
-        var target = pdata["user_input"];
-        console.log(`User put in ${target} for ${type}.`);
+        var type = input_data["input_type"];
+        var blank = input_data["input_blank"];
 
-        connectAndDisplay(target, type, res);
+        database_connect_find_display(type, blank, res);
       });
   } else {
-    fs.readFile(filePath, function (err, content) {
+    fs.readFile(file_path, function (err, content) {
       if (err) {
-        // alert('error page');
-        display404Page(err, res);
+        display_404(err, res);
       } else {
-        //   alert('content page');
-        displayCurrentContent(content, contentType, res);
+        display_content(content, content_type, res);
       }
     });
   }
 });
 
-// the port in a variable using environment variable;
-const port = process.env.PORT || 3000;
-server.listen(port, () => console.log(`Server running on port ${port}`));
-
-// Returns the string for Content-Type given a files path.
-function getContType(filePath) {
-  var ext = path.extname(filePath);
-  switch (ext) {
-    case ".html":
-      return "text/html";
-    case ".js":
-      return "text/javascript";
-    case ".css":
-      return "text/css";
-    default:
-      return "text/html";
-  }
-}
-
-// displays error page when user attempts to view non page on server
-function display404Page(err, res) {
-  if (err.code == "ENOENT") {
-    // Display 404 page
-    fs.readFile(path.join(__dirname, "public", "404.html"), (err, content) => {
-      res.writeHead(200, { "Content-Type": "text/html" });
-      res.end(content, "utf8");
-    });
-  }
-}
-
-// Takes the response from server and displays content.
-function displayCurrentContent(content, contentType, res) {
-  res.writeHead(200, { "Content-Type": contentType });
-  res.end(content, "utf8");
-}
-
 // Query the database and display information requested
-async function connectAndDisplay(target, type, res) {
-  var t = "";
+async function database_connect_find_display(type, blank, res) {
+  var s = "<h1> Stock Ticker Results </h1>";
 
   MongoClient.connect(
     mongoUrl,
     { useUnifiedTopology: true },
     async (err, database) => {
       if (err) {
-        console.log("Connection to Mongo err: " + err);
+        console.log("Error: Connection to Mongo " + err);
         return;
       }
 
@@ -102,39 +57,73 @@ async function connectAndDisplay(target, type, res) {
       var collection = dbo.collection("equities");
 
       try {
-        theQuery = "";
-        queryOptions = "";
+        query_input = "";
+        query_option = "";
         if (type == "company") {
-          theQuery = { name: target };
-          queryOptions = {
+          query_input = { name: blank };
+          query_option = {
             sort: { name: 1 },
             projection: { _id: 0, name: 1, ticker: 1 },
           };
-          t += `<h2>Company: ${target} has ticker: </h2><br>`;
+          s += `<h2>Company ${blank} has ticker: </h2>`;
         } else if (type == "ticker") {
-          theQuery = { ticker: target };
-          queryOptions = {
+          query_input = { ticker: blank };
+          query_option = {
             sort: { name: 1 },
             projection: { _id: 0, name: 1, ticker: 1 },
           };
-          t += `<h2>Companies with ticker code ${target} are: </h2><br>`;
+          s += `<h2>Companies with ticker ${blank} are: </h2>`;
         }
 
-        var result = await collection.find(theQuery, queryOptions).toArray();
+        var result_array = await collection.find(query_input, query_option).toArray();
 
-        if (result.length === 0) {
-          console.log(`No results found`);
-          t += `No results found.`;
+        if (result_array.length === 0) {
+          s += `No results found`;
         } else {
-          result.forEach(function (curr) {
-            console.log(`${curr.name} has ticker ${curr.ticker}`);
-            t += `${curr.name} (${curr.ticker})<br>`;
+          result_array.forEach(function (curr) {
+            s += `${curr.name} (${curr.ticker})<br>`;
           });
         }
       } finally {
-        res.end(t);
+        res.end(s);
         database.close();
       }
     }
   );
+}
+
+// Returns the string for Content-Type given a files path.
+function get_content_type(file_path) {
+  var ext = path.extname(file_path);
+  switch (ext) {
+    case ".js":
+      return "text/javascript";
+    case ".html":
+      return "text/html";
+    case ".css":
+      return "text/css";
+    default:
+      return "text/html";
+  }
+}
+
+// the port in a variable using environment variable;
+const port = process.env.PORT || 3000;
+server.listen(port, () => console.log(`Port: ${port}`));
+
+// displays error page when user attempts to view non page on server
+function display_404(err, res) {
+  if (err.code == "ENOENT") {
+    // Display 404 page
+    fs.readFile(path.join(__dirname, "public", "error404.html"), (err, content) => {
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end(content, "utf8");
+    });
+  }
+}
+
+// Takes the response from server and displays content.
+function display_content(content, content_type, res) {
+  res.writeHead(200, { "Content-Type": content_type });
+  res.end(content, "utf8");
 }
